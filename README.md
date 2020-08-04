@@ -57,3 +57,27 @@ If that dosn't change the cookieName. You can retrieve it easily, here's a quick
 3. Now click on the tab "Storage" and open the "Cookie" dropdown
 4. Note down the Name of the cookie, and set cookieName to it
 ![Guide](https://github.com/TheGreyDiamond/PyNetgearSwitchController/blob/master/netgearSwitch.png)
+
+# All functions
+## Switch
+`updatePorts()`
+   Forces an update of all ports
+   
+`updateDeviceInfo()`
+   Forces an update of device info atributes
+   
+`getAllPorts()`
+   Returns all ports of the switch
+   
+`getPortByNo(num)`
+   Gets one ports by its number
+   
+`getDeviceInfo()`
+   Returns all device information
+   
+`getDevicePropByName(name)`
+   Returns device information by property name
+   
+`setPortState(portName, speed, flow)`
+   Sets the port properties
+   

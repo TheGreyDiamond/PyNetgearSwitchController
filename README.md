@@ -37,6 +37,13 @@ sw.logout()
 ```
 It will output all linked speeds.
 
+---
+**Warning**
+
+Always use sw.logout() or the next login might fail!
+
+---
+
 # Troubleshooting
 If you get an error try using another mode:
 | Mode | Devices         |

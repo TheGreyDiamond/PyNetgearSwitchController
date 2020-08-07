@@ -80,4 +80,4 @@ If that dosn't change the cookieName. You can retrieve it easily, here's a quick
    
 `setPortState(portName, speed, flow)`
    Sets the port properties
-   
+  

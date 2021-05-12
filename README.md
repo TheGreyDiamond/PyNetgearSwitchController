@@ -48,8 +48,8 @@ Always use sw.logout() or the next login might fail!
 If you get an error try using another mode:
 | Mode | Devices         |
 |------|-----------------|
-| 1    | GS105Ev2[Works] |
-| 2    | GS108Ev3[Works] |
+| 1    |  Unknown        |
+| 2    | GS108Ev3[Works] GS105Ev2[Works] |
 
 If that dosn't change the cookieName. You can retrieve it easily, here's a quick guide:
 1. Open Firefox and navigate to your switch's login page. Then login.

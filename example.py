@@ -1,6 +1,6 @@
 import switch
 
-sw = switch.NetgearSwitch(ip = "", SID="", cookieName="SID", hashN = 27016,passwordHash="") 
+sw = switch.NetgearSwitch(ip = "", cookieName="SID", hashN = 27016, password="") 
 
 ports = sw.getAllPorts()
 #sw.setPortState("port4","1","2")

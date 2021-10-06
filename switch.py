@@ -1,5 +1,5 @@
 import requests
-import hashlib
+import generate_hash
 
 def removeEmptiesFromList(li):
     ## Remove empty elements
@@ -26,8 +26,9 @@ def removeEmptiesFromList(li):
                 
 
 class NetgearSwitch():
-    def __init__(self, ip,SID, hashN, passwordHash, cookieName = "SID", mode=1):
+    def __init__(self, ip, hashN, password, cookieName = "SID", mode=1):
         headers = {'User-Agent': 'Mozilla/5.0','Content-Type':'application/x-www-form-urlencoded'}
+        passwordHash = generate_hash.makeHash(ip, password)
         payload = {'password':passwordHash}
         try:
             r2 = requests.post('http://' + ip + '/login.cgi', headers=headers, data=payload )

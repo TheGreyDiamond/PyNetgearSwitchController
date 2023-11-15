@@ -209,7 +209,14 @@ class NetgearSwitch():
     def getDevicePropByName(self, name):
         return(self.deviceInfo[name])
 
-    def setPortState(self, portName, speed, flow):
+    def setPortState(self, port, speed=1, flow='2', turnOn=True):
+        '''
+        Configure individual ports\n
+        Pass only `port` to reset to default (ON, Auto)\n
+        Pass with `turnOn=False` to disable port\n
+        `port` is either int (1,2..) or name (port1, port2...)
+        See function for more options
+        '''
         speedTable = {
             "Auto": 1,
             "Disable": 2,
@@ -222,8 +229,15 @@ class NetgearSwitch():
             pI = int(speed)
         except ValueError:
             speed = speedTable[speed]
-        
-        
+
+        try:
+            portName = f"port{int(port)}"
+        except ValueError:
+            portName = port
+
+        if not turnOn:
+            speed = 2
+
         if(self.__mode__ == 2):
             headers = {'User-Agent': 'Mozilla/5.0','Content-Type':'application/x-www-form-urlencoded'}
             payload = {'DESCRIPTION': portName, 'SPEED':speed,'FLOW_CONTROL':flow,portName:'checked','hash':self.__hash__}

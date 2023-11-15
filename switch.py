@@ -1,5 +1,6 @@
 import requests
 import generate_hash
+import pickle
 
 def removeEmptiesFromList(li):
     ## Remove empty elements
@@ -26,7 +27,39 @@ def removeEmptiesFromList(li):
                 
 
 class NetgearSwitch():
-    def __init__(self, ip, hashN, password, cookieName = "SID", mode=1):
+    def __init__(self, ip, password, cookieName = "SID", mode=2):
+        # Attempt to read existing cookie
+        try:
+            with open('.SID', 'rb') as f:
+                dict = pickle.load(f)
+            if dict != None and len(dict) > 0:
+                self.__cookies__ = dict
+            print("Resuing existing cookie login...")
+        # If no cookies, relogin
+        except:
+            print("Re-logging in...")
+            self.fetchCookie(ip, password, cookieName)
+
+        print(f"Using cookie: {self.__cookies__}\n")
+
+        self.__ports__ = []
+        self.ip = ip
+        self.__mode__ = mode
+
+        self.deviceInfo = {}
+        try:
+            self.updateDeviceInfo()
+            self.__hash__ = self.deviceInfo['hash']
+        except:
+            print("Cookie token invalid; Re-loggin in...")
+            self.fetchCookie(ip, password, cookieName)
+            print(f"Using cookie: {self.__cookies__}\n")
+            self.updateDeviceInfo()
+            self.__hash__ = self.deviceInfo['hash']
+
+        self.updatePorts()
+
+    def fetchCookie(self, ip, password, cookieName):
         headers = {'User-Agent': 'Mozilla/5.0','Content-Type':'application/x-www-form-urlencoded'}
         passwordHash = generate_hash.makeHash(ip, password)
         payload = {'password':passwordHash}
@@ -34,21 +67,11 @@ class NetgearSwitch():
             r2 = requests.post('http://' + ip + '/login.cgi', headers=headers, data=payload )
         except:
             raise Exception("Unknow host")
-        #print(r2.cookies)
         self.__cookies__ = {cookieName: r2.cookies[cookieName]}
-        self.__ports__ = []
-        self.ip = ip
-        self.__mode__ = mode
-        self.__hash__ = hashN
-        
-        
-        
-        self.deviceInfo = {}
-        #self.logout()
-        self.updatePorts()
-        self.updateDeviceInfo()
-        #self.logout()
-        #
+        # Save cookie
+        file = open('.SID', 'wb')
+        pickle.dump(self.__cookies__, file)
+        file.close()
 
     def splitE(self, word): 
         return [char for char in word]
@@ -60,7 +83,6 @@ class NetgearSwitch():
         elif(self.__mode__ == 2):
             r = requests.post('http://' + self.ip + '/status.cgi', cookies=self.__cookies__)
         pro = r.text
-        print(pro)
         pro = pro.split('<tr><td class="topTitleBottomBar" colspan="2"></td></tr>')[1]
         pro = pro.split('''       </table>
               </td>
@@ -105,7 +127,6 @@ class NetgearSwitch():
             r = requests.post('http://' + self.ip + '/switch_info.cgi', cookies=self.__cookies__)
             
         pro = r.text
-        #print(pro)
         if(self.__mode__ == 2):
             pro = pro.split("<tr><td class=\"paddingTableBody\" colspan='2'><table class=\"tableStyle\" id=\"tbl2\" style=\"width:728px;\">")[1]
             pro = pro.split("<input type=hidden name='err_msg' id='err_msg' value='' disabled>")[0]
@@ -132,13 +153,13 @@ class NetgearSwitch():
                             temData[1] = temData[1][32:temData[1].index("size=")]
                             dataT[temData[0][2:]] = temData[1]
                         elif(temData[0][2:] == "DHCP Mode"):
-                            #print(str(temData) + " ID: " + str(i2) + " WITH len: " + str(len(temData)))
                             temData[5] =  temData[5].replace("  <input type=\"checkbox\" id=\"refresh\" name=\"refresh\" value=\"","")
                             temData[5] = temData[5].split("\"")[0]
                             dataT[temData[0][2:]] = temData[5]
-                            #print(temData[5])
-                        else:
-                            print("!! NO HANDEL FOUND !! " + str(temData) + " ID: " + str(i2) + " WITH len: " + str(len(temData)))
+                        elif(temData[0][2:] == "Gateway Address"):
+                            temData[2] = temData[2][:].replace("<input type=hidden name='hash' id='hash' value=\"","")
+                            temData[2] = temData[2].split("\"")[0]
+                            dataT['hash'] = temData[2]
                 i2+=1
             self.deviceInfo = dataT
         elif(self.__mode__ == 1):
@@ -171,16 +192,16 @@ class NetgearSwitch():
                             temData[1] = temData[1][32:temData[1].index("size=")]
                             dataT[temData[0][2:]] = temData[1]
                         elif(temData[0][2:] == "DHCP Mode"):
-                            #print(str(temData) + " ID: " + str(i2) + " WITH len: " + str(len(temData)))
                             temData[5] =  temData[5].replace("  <input type=\"checkbox\" id=\"refresh\" name=\"refresh\" value=\"","")
                             temData[5] = temData[5].split("\"")[0]
                             dataT[temData[0][2:]] = temData[5]
-                            #print(temData[5])
-                        else:
-                            print("!! NO HANDEL FOUND !! " + str(temData) + " ID: " + str(i2) + " WITH len: " + str(len(temData)))
+                        elif(temData[0][2:] == "Gateway Address"):
+                            temData[2] = temData[2][:].replace("<input type=hidden name='hash' id='hash' value=\"","")
+                            temData[2] = temData[2].split("\"")[0]
+                            dataT['hash'] = temData[2]
                 i2+=1
             self.deviceInfo = dataT
-        print(dataT)
+        # print(dataT)
         
     def getDeviceInfo(self):
         return(self.deviceInfo)
@@ -188,7 +209,14 @@ class NetgearSwitch():
     def getDevicePropByName(self, name):
         return(self.deviceInfo[name])
 
-    def setPortState(self, portName, speed, flow):
+    def setPortState(self, port, speed=1, flow='2', turnOn=True):
+        '''
+        Configure individual ports\n
+        Pass only `port` to reset to default (ON, Auto)\n
+        Pass with `turnOn=False` to disable port\n
+        `port` is either int (1,2..) or name (port1, port2...)
+        See function for more options
+        '''
         speedTable = {
             "Auto": 1,
             "Disable": 2,
@@ -201,15 +229,23 @@ class NetgearSwitch():
             pI = int(speed)
         except ValueError:
             speed = speedTable[speed]
-        
-        
-        if(self.__mode__ == 1):
+
+        try:
+            portName = f"port{int(port)}"
+        except ValueError:
+            portName = port
+
+        if not turnOn:
+            speed = 2
+
+        if(self.__mode__ == 2):
             headers = {'User-Agent': 'Mozilla/5.0','Content-Type':'application/x-www-form-urlencoded'}
-            payload = {'SPEED':speed,'FLOW_CONTROL':flow,portName:'checked','hash':self.__hash__}
+            payload = {'DESCRIPTION': portName, 'SPEED':speed,'FLOW_CONTROL':flow,portName:'checked','hash':self.__hash__}
+            print(f"Executing POST with: {payload}")
             r2 = requests.post('http://' + self.ip + '/status.cgi', cookies=self.__cookies__,headers=headers,data=payload )
         else:
-            r2 = requests.post('http://' + self.ip + '/status.cgi&SPEED=' + str(speed) + '&FLOW_CONTROL=' + flow +'&' + portName + '=checked&hash=' + self.__hash__, cookies=self.__cookies__)
-        print(r2.text)
+            r2 = requests.post('http://' + self.ip + '/status.cgi&DESCRIPTION=' + str(portName) + '&SPEED=' + str(speed) + '&FLOW_CONTROL=' + str(flow) +'&' + portName + '=checked&hash=' + str(self.__hash__), cookies=self.__cookies__)
+        # print(r2.text)
         
         r2.close() 
     def logout(self):
@@ -225,5 +261,3 @@ class port():
         self.realSpeed = "unset"
         self.flow = "unset"
         self.maxMTU = "unset"
-
-
